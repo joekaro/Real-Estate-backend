@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+/* generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+*/
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  password        String
+  name            String?
+  phone           String?
+  role            Role            @default(BUYER)
+  savedProperties SavedProperty[]
+  properties      Property[]      // Added this relation
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  AGENT
+  ADMIN
+}
+
+model Property {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  price       Int
+  type        PropertyType
+  status      PropertyStatus  @default(ACTIVE)
+  bedrooms    Int
+  bathrooms   Int
+  sqft        Int
+  yearBuilt   Int?
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  latitude    Float?
+  longitude   Float?
+  amenities   String          // Changed from String[] to String (store as JSON)
+  images      String          // Changed from String[] to String (store as JSON)
+  virtualTour String?
+  floorPlan   String?
+  featured    Boolean         @default(false)
+  agentId     String?
+  agent       User?           @relation(fields: [agentId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  savedProperties SavedProperty[]
+
+  @@map("properties")
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  CONDO
+  TOWNHOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum PropertyStatus {
+  ACTIVE
+  PENDING
+  SOLD
+  RENTED
+}
+
+model SavedProperty {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@map("saved_properties")
+}
