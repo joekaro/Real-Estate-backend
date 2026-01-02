@@ -11,20 +11,49 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 
-// Basic route
-app.get('/api/health', (req, res) => {
+// Health check with database status
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: 'OK', 
+      message: 'LuxeLiving API is running',
+      database: 'Connected',
+      environment: process.env.NODE_ENV || 'development',
+      platform: process.env.RENDER ? 'Render' : 'Local'
+    });
+  } catch (error) {
+    // Proper error handling
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.json({ 
+      status: 'WARNING', 
+      message: 'API is running but database may have issues',
+      database: 'Error',
+      error: errorMessage,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
+});
+
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
   res.json({ 
-    status: 'OK', 
-    message: 'LuxeLiving Realty API is running',
+    success: true, 
+    message: 'API is working!',
     timestamp: new Date().toISOString(),
-    database: 'Connected'
+    url: req.get('host')
   });
 });
 
@@ -36,12 +65,6 @@ app.get('/api/properties/featured', async (req, res) => {
       take: 6,
       orderBy: { createdAt: 'desc' }
     });
-
-    app.use(cors({
-  origin: '*', // Allow all for now (we'll restrict later)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
     
     const formattedProperties = properties.map(property => ({
       ...property,
@@ -56,7 +79,8 @@ app.get('/api/properties/featured', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching featured properties:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching featured properties:', errorMessage);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch featured properties'
@@ -127,10 +151,41 @@ app.get('/api/properties', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching properties:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch properties'
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching properties:', errorMessage);
+    
+    // Fallback sample data
+    const sampleData = [
+      {
+        id: 'sample-1',
+        title: 'Sample Luxury Home',
+        description: 'This is sample data. Database might be initializing.',
+        price: 1500000,
+        type: 'HOUSE',
+        bedrooms: 4,
+        bathrooms: 3,
+        sqft: 3000,
+        address: '456 Sample Street',
+        city: 'Sample City',
+        state: 'CA',
+        zipCode: '90000',
+        amenities: ['Pool', 'Garage', 'Garden'],
+        images: ['https://picsum.photos/800/600?sample=1'],
+        featured: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    
+    res.json({
+      success: true,
+      count: sampleData.length,
+      total: sampleData.length,
+      page: 1,
+      pages: 1,
+      data: sampleData,
+      note: 'Using sample data. Database connection might be establishing.',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
     });
   }
 });
@@ -174,7 +229,8 @@ app.get('/api/properties/:id', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching property:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching property:', errorMessage);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch property'
@@ -182,9 +238,21 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
+// Simple auth info endpoint
+app.get('/api/auth', (req, res) => {
+  res.json({
+    message: 'Authentication API',
+    endpoints: {
+      register: 'POST /api/auth/register',
+      login: 'POST /api/auth/login'
+    }
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔐 Auth routes: http://localhost:${PORT}/api/auth`);
+  console.log(`🏠 Properties: http://localhost:${PORT}/api/properties`);
   console.log(`💾 Database: Connected`);
 });
