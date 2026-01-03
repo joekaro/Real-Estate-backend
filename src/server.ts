@@ -7,8 +7,42 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Sample property data
-const sampleProperties = {
+// Define property type
+interface Property {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  type: string;
+  status: string;
+  bedrooms: number;
+  bathrooms: number;
+  sqft: number;
+  yearBuilt: number;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  latitude: number;
+  longitude: number;
+  amenities: string[];
+  images: string[];
+  featured: boolean;
+  agent: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+  };
+  virtualTour: string | null;
+  floorPlan: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Sample property data with index signature
+const sampleProperties: { [key: string]: Property } = {
   'luxury-villa-1': {
     id: 'luxury-villa-1',
     title: 'Luxury Oceanfront Villa',
@@ -219,11 +253,8 @@ app.get('/api/test', (req, res) => {
 
 // Get featured properties
 app.get('/api/properties/featured', (req, res) => {
-  const featuredProperties = [
-    sampleProperties['luxury-villa-1'],
-    sampleProperties['downtown-penthouse-2'],
-    sampleProperties['mountain-cabin-3']
-  ];
+  const featuredIds = ['luxury-villa-1', 'downtown-penthouse-2', 'mountain-cabin-3'];
+  const featuredProperties = featuredIds.map(id => sampleProperties[id]);
   
   res.json({
     success: true,
@@ -248,16 +279,18 @@ app.get('/api/properties', (req, res) => {
   });
 });
 
-// Get single property - SIMPLE WORKING VERSION
+// Get single property - FIXED TYPE ISSUE
 app.get('/api/properties/:id', (req, res) => {
   const { id } = req.params;
   
   console.log(`Looking for property with ID: ${id}`);
   
-  if (sampleProperties[id]) {
+  const property = sampleProperties[id];
+  
+  if (property) {
     return res.json({
       success: true,
-      data: sampleProperties[id],
+      data: property,
       source: 'sample'
     });
   }
